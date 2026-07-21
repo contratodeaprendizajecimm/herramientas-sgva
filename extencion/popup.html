@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cambio disponible SGVA</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            width: 450px;
+            min-height: 400px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .container {
+            background: white;
+            border-radius: 0;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #39b54a 0%, #1e7a2f 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            font-size: 11px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 20px;
+        }
+        
+        .section {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 3px solid #39b54a;
+        }
+        
+        .section h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .file-upload {
+            border: 2px dashed #39b54a;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+        }
+        
+        .file-upload:hover {
+            background: #f0f8f1;
+        }
+        
+        .file-upload input {
+            display: none;
+        }
+        
+        .upload-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #39b54a 0%, #1e7a2f 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(57, 181, 74, 0.4);
+        }
+        
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .alert {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 3px solid #28a745;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 3px solid #ffc107;
+        }
+        
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 3px solid #dc3545;
+        }
+        
+        .status-box {
+            font-size: 12px;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #39b54a 0%, #1e7a2f 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 11px;
+        }
+        
+        .log-console {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        
+        .log-entry {
+            margin-bottom: 3px;
+        }
+        
+        small {
+            font-size: 11px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Cambio disponible SGVA</h1>
+            <p>Regional Boyacá - CIMM Sogamoso</p>
+        </div>
+        <button class="btn btn-secondary" id="checkConnectionBtn">
+        🔄 Verificar Conexión
+        </button>
+        
+        <div class="content">
+    <!-- Estado de conexión -->
+    <div id="connectionStatus"></div>
+    
+    <!-- Sección de carga de archivo -->
+    <div class="section">
+        <h3>📁 Cargar Excel (Cambio disponible)</h3>
+        <div class="file-upload" id="fileUploadArea">
+            <label for="excelFile" style="cursor: pointer;">
+                <div class="upload-icon">📄</div>
+                <p><strong>Seleccionar archivo</strong></p>
+                <small>Excel con aprendices (.xlsx, .xls)</small>
+            </label>
+            <input type="file" id="excelFile" accept=".xlsx,.xls">
+        </div>
+        <div id="fileInfo" style="display: none; margin-top: 10px;">
+            <div class="alert alert-success">
+                ✓ <strong id="fileName"></strong><br>
+                <span id="fileCount"></span> aprendices cargados
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sección de Cambio disponible -->
+    <div id="automationSection" style="display: none;">
+        <div class="section">
+            <h3>⚙️ Cambio disponible</h3>
+            <div class="alert alert-warning">
+                ⚠️ Asegúrate de estar logueado en el SGVA como funcionario
+            </div>
+            <button class="btn btn-secondary" id="openSGVA">
+                🌐 Abrir SGVA en nueva pestaña
+            </button>
+            <button class="btn btn-primary" id="startBtn" disabled>
+                ▶️ Iniciar Cambio disponible
+            </button>
+        </div>
+        
+        <!-- Progreso -->
+        <div id="progressSection" style="display: none;">
+            <div class="section">
+                <h3>📊 Progreso</h3>
+                <div class="status-box">
+                    <strong>Estado:</strong> <span id="currentStatus">Iniciando...</span><br>
+                    <strong>Procesados:</strong> <span id="progressText">0/0</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill">0%</div>
+                </div>
+                <div class="log-console" id="logConsole"></div>
+            </div>
+        </div>
+        
+        <!-- Completado -->
+        <div id="completionSection" style="display: none;">
+            <div class="alert alert-success">
+                <strong>✅ Proceso Completado</strong><br>
+                <span id="finalCount"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== NUEVA SECCIÓN: REPORTES POR ESTADO ========== -->
+    <div class="section">
+        <h3>📥 Descargar Reportes por Estado</h3>
+        <div class="alert alert-warning">
+            ⚠️ Ve primero a:<br>
+            <strong>https://caprendizaje.sena.edu.co/sgva/Admin/Reportes/Reporte13</strong>
+        </div>
+        
+        <button class="btn btn-secondary" id="btnCargarEstados" style="margin-bottom:10px;">
+            🔄 Cargar estados desde SGVA
+        </button>
+        
+        <div id="estadosCheckboxes" style="margin-bottom: 12px; max-height: 200px; overflow-y: auto;">
+            <small style="color:#666;">Haz clic en "Cargar estados" para ver los disponibles</small>
+        </div>
+        
+        <button class="btn btn-primary" id="btnDescargarReportes" disabled>
+    📥 Descargar Reportes Seleccionados
+</button>
+<button class="btn btn-danger" id="btnAbortar" style="display:none; background:#dc2626; margin-top:8px; width:100%; padding:12px; border:none; border-radius:6px; font-size:14px; font-weight:600; color:white; cursor:pointer;">
+    ⛔ Abortar Operación
+</button>
+        
+        <div id="reportesProgressBox" style="display:none; margin-top:12px;">
+            <div class="progress-bar">
+                <div class="progress-fill" id="reportesProgressFill" style="width:0%">0%</div>
+            </div>
+            <div class="status-box" style="margin-top:6px;">
+                <strong>Estado:</strong> <span id="reportesStatusText">Iniciando...</span><br>
+                <strong>Progreso:</strong> <span id="reportesProgressText">0/0</span>
+            </div>
+            <div class="log-console" id="reportesLogConsole" style="max-height:100px; margin-top:8px;"></div>
+        </div>
+        
+        <div id="reportesCompletion" style="display:none; margin-top:10px;"></div>
+    </div>
+</div>
+    </div>
+    
+    <script src="xlsx.full.min.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>

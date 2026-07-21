@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consolidador SENA - Etapa Práctica</title>
+    <!-- 
+        INSTRUCCIONES DE INSTALACIÓN OFFLINE:
+        1. Descarga la librería SheetJS desde: https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js
+        2. Guarda el archivo en la MISMA carpeta donde pongas este HTML.
+        3. El nombre del archivo debe ser exactamente: xlsx.full.min.js
+        4. Si no descargas la librería, la herramienta NO funcionará sin internet.
+    -->
+    <script src="./xlsx.full.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f1f5f9;
+            color: #1e293b;
+            line-height: 1.5;
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 16px; }
+
+        header {
+            background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%);
+            color: white;
+            padding: 28px 24px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        header h1 { font-size: 1.6rem; margin-bottom: 6px; }
+        header p { opacity: 0.85; font-size: 0.9rem; max-width: 600px; margin: 0 auto; }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .upload-area {
+            border: 2px dashed #94a3b8;
+            border-radius: 12px;
+            padding: 40px 24px;
+            text-align: center;
+            background: #f8fafc;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .upload-area:hover {
+            border-color: #2563eb;
+            background: #eff6ff;
+        }
+        .upload-area h3 { color: #475569; margin-bottom: 8px; font-size: 1.1rem; }
+        .upload-area p { color: #94a3b8; font-size: 0.9rem; margin-bottom: 16px; }
+        .upload-area input { display: none; }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: all 0.15s;
+            width: 100%;
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-success { background: #059669; color: white; }
+        .btn-success:hover:not(:disabled) { background: #047857; }
+        .btn-danger { background: #dc2626; color: white; }
+        .btn-danger:hover:not(:disabled) { background: #b91c1c; }
+        .btn-warning { background: #d97706; color: white; }
+        .btn-warning:hover:not(:disabled) { background: #b45309; }
+        .btn-secondary { background: #e2e8f0; color: #475569; }
+        .btn-secondary:hover:not(:disabled) { background: #cbd5e1; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 18px 14px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            border-top: 4px solid #cbd5e1;
+        }
+        .stat-card.validos { border-top-color: #059669; }
+        .stat-card.no-validos { border-top-color: #dc2626; }
+        .stat-card.conflictos { border-top-color: #d97706; }
+        .stat-card.info { border-top-color: #2563eb; }
+        .stat-value { font-size: 1.8rem; font-weight: 800; color: #0f172a; line-height: 1; }
+        .stat-label { font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 700; letter-spacing: 0.04em; margin-top: 6px; }
+
+        .actions-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 16px;
+        }
+        @media (min-width: 640px) {
+            .actions-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+        .chip {
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 0.82rem;
+        }
+
+        .logs {
+            background: #0f172a;
+            color: #e2e8f0;
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-family: 'SF Mono', monospace;
+            font-size: 0.8rem;
+            max-height: 180px;
+            overflow-y: auto;
+            margin-top: 12px;
+        }
+        .logs .entry { margin-bottom: 4px; }
+        .logs .ok { color: #4ade80; }
+        .logs .err { color: #f87171; }
+        .logs .warn { color: #fbbf24; }
+        .logs .info { color: #60a5fa; }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #0f172a;
+            color: white;
+            padding: 14px 20px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            display: none;
+            z-index: 1000;
+            font-size: 0.9rem;
+            max-width: 400px;
+        }
+        .toast.error { background: #dc2626; }
+        .toast.success { background: #059669; }
+
+        .loading {
+            position: fixed;
+            inset: 0;
+            background: rgba(255,255,255,0.9);
+            display: none;
+            place-items: center;
+            z-index: 999;
+        }
+        .loading .box { text-align: center; padding: 40px; }
+        .spinner {
+            width: 40px; height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top-color: #2563eb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .dup-banner {
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 0.85rem;
+            color: #92400e;
+            margin-bottom: 12px;
+        }
+
+        .date-info {
+            background: #f8fafc;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #475569;
+            margin-bottom: 16px;
+            border: 1px solid #e2e8f0;
+        }
+        .date-info strong { color: #1e40af; }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="box">
+            <div class="spinner"></div>
+            <div>Procesando archivos...</div>
+        </div>
+    </div>
+    <div class="toast" id="toast"></div>
+
+    <div class="container">
+        <header>
+            <h1>📊 Consolidador SENA - Etapa Práctica</h1>
+            <p>Carga archivos Excel y clasifica aprendices según validez de su etapa práctica (18 meses) y cantidad de contratos.</p>
+        </header>
+
+        <!-- Panel de carga -->
+        <div class="card" id="uploadCard">
+            <div class="upload-area" id="uploadArea">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" style="margin-bottom:12px; display:block; margin-left:auto; margin-right:auto">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                </svg>
+                <h3>Selecciona una carpeta con archivos Excel</h3>
+                <p>Se leerán automáticamente todos los .xlsx, .xls y .csv</p>
+                <button class="btn btn-secondary" id="btnSelectFolder" style="width:auto; display:inline-flex">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    Elegir carpeta
+                </button>
+                <input type="file" id="folderInput" webkitdirectory directory multiple>
+            </div>
+            <div class="chips" id="fileChips"></div>
+            <div class="logs" id="logs" style="display:none"></div>
+        </div>
+
+        <!-- Panel de resultados (oculto inicialmente) -->
+        <div class="card hidden" id="resultsCard">
+            <div class="date-info" id="dateInfo"></div>
+
+            <div class="dup-banner hidden" id="dupBanner">
+                ⚠️ Se eliminaron <strong id="dupCount">0</strong> filas duplicadas idénticas (mismo documento y mismos datos).
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card validos">
+                    <div class="stat-value" id="stValidos">0</div>
+                    <div class="stat-label">✅ Válidos<br><span style="font-weight:400; font-size:0.7rem">Dentro de 18 meses</span></div>
+                </div>
+                <div class="stat-card no-validos">
+                    <div class="stat-value" id="stNoValidos">0</div>
+                    <div class="stat-label">❌ No Válidos<br><span style="font-weight:400; font-size:0.7rem">Venció + 0 contratos</span></div>
+                </div>
+                <div class="stat-card conflictos">
+                    <div class="stat-value" id="stConflictos">0</div>
+                    <div class="stat-label">⚠️ Conflictos<br><span style="font-weight:400; font-size:0.7rem">Venció + tiene contratos</span></div>
+                </div>
+                <div class="stat-card info">
+                    <div class="stat-value" id="stFiles">0</div>
+                    <div class="stat-label">Archivos<br><span style="font-weight:400; font-size:0.7rem">Cargados</span></div>
+                </div>
+            </div>
+
+            <div class="actions-grid">
+                <button class="btn btn-success" id="btnExportValidos" disabled>
+                    📥 Descargar Válidos
+                </button>
+                <button class="btn btn-danger" id="btnExportNoValidos" disabled>
+                    📥 Descargar No Válidos
+                </button>
+                <button class="btn btn-warning" id="btnExportConflictos" disabled>
+                    📥 Descargar Conflictos
+                </button>
+            </div>
+
+            <div style="text-align:center; margin-top:16px">
+                <button class="btn btn-secondary" id="btnClear" style="width:auto; display:inline-flex">
+                    🗑️ Limpiar todo y cargar otra carpeta
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        // ESTADO GLOBAL
+        // ============================================================
+
+        /** Array maestro con todas las filas leídas de los archivos. */
+        let allRows = [];
+
+        /** Filas clasificadas como VÁLIDAS (dentro de 18 meses). */
+        let validos = [];
+
+        /** Filas clasificadas como NO VÁLIDAS (venció + 0 contratos). */
+        let noValidos = [];
+
+        /** Filas clasificadas como CONFLICTOS (venció + tiene contratos). */
+        let conflictos = [];
+
+        /** Nombres de columnas detectadas en los archivos. */
+        let colNames = [];
+
+        /** Archivos Excel/CSV ya cargados (evita duplicados de archivo). */
+        let loadedFiles = [];
+
+        /** Fecha actual del sistema. */
+        const hoy = new Date();
+
+        /** Fecha de corte: hoy menos 18 meses. Si la Fecha Productiva es <= esta fecha, el aprendiz venció. */
+        const fechaCorte18 = new Date(hoy.getFullYear(), hoy.getMonth() - 18, hoy.getDate());
+
+        // ============================================================
+        // UTILIDADES DOM
+        // ============================================================
+
+        /** Atajo para document.getElementById */
+        const $ = id => document.getElementById(id);
+
+        /**
+         * Escribe un mensaje en el panel de logs con timestamp y color según tipo.
+         * @param {string} msg - Mensaje a mostrar.
+         * @param {string} type - Tipo: 'info' (azul), 'ok' (verde), 'warn' (amarillo), 'err' (rojo).
+         */
+        const log = (msg, type = 'info') => {
+            const logs = $('logs');
+            logs.style.display = 'block';
+            const div = document.createElement('div');
+            div.className = `entry ${type}`;
+            const time = new Date().toLocaleTimeString();
+            div.textContent = `[${time}] ${msg}`;
+            logs.appendChild(div);
+            logs.scrollTop = logs.scrollHeight;
+            console.log(`[${type}] ${msg}`);
+        };
+
+        /**
+         * Muestra un toast flotante en la esquina inferior derecha.
+         * @param {string} msg - Texto del mensaje.
+         * @param {string} type - 'success' (verde) o 'error' (rojo).
+         */
+        function showToast(msg, type = 'success') {
+            const t = $('toast');
+            t.textContent = msg;
+            t.className = 'toast ' + type;
+            t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 4000);
+        }
+
+        /**
+         * Escapa caracteres HTML para evitar inyección XSS.
+         * @param {string} s - Texto a escapar.
+         * @returns {string} Texto seguro para innerHTML.
+         */
+        function esc(s) {
+            const d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        // ============================================================
+        // FECHAS
+        // ============================================================
+
+        /**
+         * Intenta convertir cualquier valor a un objeto Date válido.
+         * Soporta: números serial de Excel, strings DD/MM/YYYY, YYYY-MM-DD, ISO, y objetos Date.
+         * @param {*} val - Valor crudo de la celda.
+         * @returns {Date|null} Fecha parseada o null si no se pudo interpretar.
+         */
+        function parseFecha(val) {
+            if (!val) return null;
+            if (val instanceof Date) return isNaN(val) ? null : val;
+
+            // Número serial de Excel (ej: 45000)
+            if (typeof val === 'number') {
+                const epoch = new Date(1899, 11, 30);
+                const days = val > 60 ? val - 1 : val; // Ajuste bug Lotus 1-2-3
+                return new Date(epoch.getTime() + days * 86400000);
+            }
+
+            const s = String(val).trim();
+
+            // String numérico (serial de Excel como texto)
+            if (/^\d+(\.\d+)?$/.test(s)) {
+                const n = parseFloat(s);
+                const epoch = new Date(1899, 11, 30);
+                const days = n > 60 ? n - 1 : n;
+                const d = new Date(epoch.getTime() + days * 86400000);
+                if (!isNaN(d)) return d;
+            }
+
+            // Formato DD/MM/YYYY o DD-MM-YYYY
+            let m = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+            if (m) return new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]));
+
+            // Formato YYYY/MM/DD o YYYY-MM-DD
+            m = s.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+            if (m) return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+
+            // ISO u otros formatos nativos de JavaScript
+            const d = new Date(s);
+            return isNaN(d) ? null : d;
+        }
+
+        /**
+         * Busca y devuelve la Fecha Productiva de una fila.
+         * Revisa múltiples variantes de nombre de columna.
+         * @param {Object} row - Fila de datos.
+         * @returns {Date|null} Fecha Productiva parseada o null.
+         */
+        function getFechaProductiva(row) {
+            const candidates = [
+                'Fecha Productiva', 'Fechaproductiva', 'FECHA PRODUCTIVA',
+                'fecha productiva', 'FechaProductiva', 'Fecha_Productiva',
+                'FECHA_PRODUCTIVA', 'Fecha Práctica', 'FechaPractica',
+                'FECHA PRACTICA', 'fecha_practica', 'Etapa Practica',
+                'Etapa Práctica', 'ETAPA PRACTICA', 'ETAPA PRÁCTICA'
+            ];
+
+            for (const c of candidates) {
+                if (row[c] !== undefined) {
+                    const val = row[c];
+                    if (val instanceof Date && !isNaN(val)) return val;
+                    return parseFecha(val);
+                }
+            }
+
+            // Búsqueda flexible por substring
+            for (const k of Object.keys(row)) {
+                const lower = k.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+                if (lower.includes('fecha') && (lower.includes('productiva') || lower.includes('practica'))) {
+                    const val = row[k];
+                    if (val instanceof Date && !isNaN(val)) return val;
+                    return parseFecha(val);
+                }
+            }
+            return null;
+        }
+
+        /**
+         * Busca y devuelve el Número de Documento de una fila.
+         * Revisa múltiples variantes de nombre de columna.
+         * @param {Object} row - Fila de datos.
+         * @returns {string} Número de documento como string (vacío si no se encuentra).
+         */
+        function getNumeroDocumento(row) {
+            const candidates = [
+                'Número Documento', 'Numero Documento', 'NUMERO DOCUMENTO',
+                'Documento', 'DOCUMENTO', 'documento', 'NumeroDocumento',
+                'NúmeroDocumento', 'Nro Documento', 'NRO DOCUMENTO',
+                'NroDocumento', 'CC', 'cc', 'C.C.', 'Cedula', 'Cédula',
+                'CEDULA', 'CÉDULA', 'Identificación', 'IDENTIFICACION',
+                'identificacion', 'ID', 'id'
+            ];
+
+            for (const c of candidates) {
+                if (row[c] !== undefined) return String(row[c]).trim();
+            }
+
+            // Búsqueda flexible por substring
+            for (const k of Object.keys(row)) {
+                const lower = k.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+                if (lower.includes('numero') && lower.includes('documento')) return String(row[k]).trim();
+                if (lower === 'documento' || lower === 'cedula' || lower === 'identificacion') return String(row[k]).trim();
+            }
+            return '';
+        }
+
+        /**
+         * Busca y devuelve la Cantidad de Contratos de una fila.
+         * Revisa múltiples variantes de nombre de columna.
+         * @param {Object} row - Fila de datos.
+         * @returns {number} Cantidad de contratos (0 si no se encuentra o no es número).
+         */
+        function getCantidadContratos(row) {
+            const candidates = [
+                'Cantidad de contratos', 'Cantidad Contratos', 'CANTIDAD DE CONTRATOS',
+                'CANTIDAD CONTRATOS', 'cantidad de contratos', 'cantidad_contratos',
+                'CantidadContratos', 'Cantidad_De_Contratos', 'Numero Contratos',
+                'Numero de Contratos', 'NUMERO CONTRATOS', 'NUMERO DE CONTRATOS',
+                'Nro Contratos', 'Nro de Contratos', 'Contratos', 'CONTRATOS',
+                'contratos', 'Total Contratos', 'TOTAL CONTRATOS'
+            ];
+
+            for (const c of candidates) {
+                if (row[c] !== undefined) {
+                    const val = row[c];
+                    if (typeof val === 'number') return val;
+                    const n = parseFloat(String(val).trim());
+                    return isNaN(n) ? 0 : n;
+                }
+            }
+
+            // Búsqueda flexible por substring
+            for (const k of Object.keys(row)) {
+                const lower = k.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+                if (lower.includes('cantidad') && lower.includes('contrato')) {
+                    const val = row[k];
+                    if (typeof val === 'number') return val;
+                    const n = parseFloat(String(val).trim());
+                    return isNaN(n) ? 0 : n;
+                }
+                if (lower === 'contratos' || lower === 'contrato') {
+                    const val = row[k];
+                    if (typeof val === 'number') return val;
+                    const n = parseFloat(String(val).trim());
+                    return isNaN(n) ? 0 : n;
+                }
+            }
+            return 0;
+        }
+
+        // ============================================================
+        // LECTURA DE ARCHIVOS
+        // ============================================================
+
+        /**
+         * Abre el diálogo de selección de carpeta cuando el usuario hace clic.
+         */
+        $('btnSelectFolder').addEventListener('click', (e) => {
+            e.stopPropagation();
+            $('folderInput').click();
+        });
+
+        /**
+         * También permite hacer clic en toda el área de upload para abrir el selector.
+         */
+        $('uploadArea').addEventListener('click', (e) => {
+            if (e.target.closest('#btnSelectFolder')) return;
+            $('folderInput').click();
+        });
+
+        /**
+         * Evento principal: cuando el usuario selecciona una carpeta,
+         * filtra solo archivos Excel/CSV válidos y los procesa secuencialmente.
+         */
+        $('folderInput').addEventListener('change', (e) => {
+            log(`${e.target.files.length} elemento(s) detectados en carpeta`, 'info');
+            processFiles(e.target.files);
+        });
+
+        // Prevenir drag & drop accidental en toda la ventana
+        window.addEventListener('dragover', e => e.preventDefault());
+        window.addEventListener('drop', e => e.preventDefault());
+
+        /**
+         * Procesa una lista de archivos FileList: filtra extensiones válidas,
+         * evita archivos duplicados (mismo nombre + tamaño), lee cada uno,
+         * pre-parsea fechas, detecta duplicados idénticos, clasifica y actualiza UI.
+         * @param {FileList} fileList - Lista de archivos del input.
+         */
+        async function processFiles(fileList) {
+            // Filtra solo archivos Excel/CSV y excluye temporales de Excel (~$)
+            const files = Array.from(fileList).filter(f => {
+                const n = f.name.toLowerCase();
+                return (n.endsWith('.xlsx') || n.endsWith('.xls') || n.endsWith('.csv')) && !f.name.startsWith('~$');
+            });
+
+            if (files.length === 0) {
+                showToast('No se encontraron archivos Excel/CSV válidos', 'error');
+                log('Ningún archivo válido detectado', 'err');
+                return;
+            }
+
+            $('loading').style.display = 'grid';
+            log(`Iniciando lectura de ${files.length} archivo(s)...`, 'info');
+
+            let nuevasFilas = 0;
+            for (const file of files) {
+                // Evita cargar el mismo archivo dos veces (por nombre y tamaño)
+                const dup = loadedFiles.find(f => f.name === file.name && f.size === file.size);
+                if (dup) { log(`Omitido duplicado de archivo: ${file.name}`, 'warn'); continue; }
+                loadedFiles.push(file);
+
+                try {
+                    log(`Leyendo ${file.name} (${(file.size / 1024).toFixed(1)} KB)...`, 'info');
+                    const rows = await readExcel(file);
+
+                    // Pre-parseo de fechas: busca columnas que contengan "fecha" en su nombre
+                    // y las convierte a objetos Date para facilitar comparaciones posteriores.
+                    rows.forEach(r => {
+                        r.__sourceFile = file.name; // Metadato: archivo de origen
+                        Object.keys(r).forEach(k => {
+                            if (k.toLowerCase().includes('fecha')) {
+                                const parsed = parseFecha(r[k]);
+                                if (parsed) r[k] = parsed;
+                            }
+                        });
+                    });
+
+                    allRows.push(...rows);
+                    nuevasFilas += rows.length;
+                    log(`${file.name}: ${rows.length} filas leídas`, 'ok');
+                } catch (err) {
+                    log(`ERROR ${file.name}: ${err.message}`, 'err');
+                }
+            }
+
+            $('loading').style.display = 'none';
+            log(`Total acumulado: ${allRows.length} filas`, 'ok');
+
+            if (allRows.length > 0) {
+                // Extrae los nombres de columnas únicos de todas las filas
+                buildColumns();
+
+                // Elimina filas duplicadas idénticas (mismo documento + mismos datos)
+                const eliminados = removeDuplicateIdentical(allRows);
+
+                // Clasifica cada fila en Válidos, No Válidos o Conflictos
+                clasificarAprendices();
+
+                // Actualiza todos los elementos visuales de la interfaz
+                updateUI(eliminados);
+
+                showToast(`${allRows.length} filas cargadas de ${loadedFiles.length} archivos`, 'success');
+                if (eliminados > 0) {
+                    showToast(`${eliminados} duplicados idénticos eliminados`, 'warn');
+                }
+            } else {
+                showToast('No se pudieron leer datos de los archivos', 'error');
+            }
+        }
+
+        /**
+         * Lee un archivo Excel o CSV usando FileReader y SheetJS.
+         * @param {File} file - Archivo del input.
+         * @returns {Promise<Array>} Array de objetos con las filas del archivo.
+         */
+        function readExcel(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onerror = () => reject(new Error('Error al leer archivo'));
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        // cellDates: true intenta parsear fechas nativas de Excel
+                        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+                        const firstSheet = workbook.SheetNames[0];
+                        const sheet = workbook.Sheets[firstSheet];
+                        // defval: '' rellena celdas vacías con string vacío
+                        const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+                        // Limpia espacios en los nombres de columnas
+                        const clean = rows.map(row => {
+                            const obj = {};
+                            Object.keys(row).forEach(k => { obj[k.trim()] = row[k]; });
+                            return obj;
+                        });
+                        resolve(clean);
+                    } catch (err) { reject(err); }
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // ============================================================
+        // COLUMNAS
+        // ============================================================
+
+        /**
+         * Extrae todos los nombres de columnas únicos del dataset global.
+         * Ignora las propiedades internas que empiezan con __ (metadatos).
+         */
+        function buildColumns() {
+            const set = new Set();
+            allRows.forEach(r => {
+                Object.keys(r).forEach(k => {
+                    if (!k.startsWith('__')) set.add(k);
+                });
+            });
+            colNames = Array.from(set);
+        }
+
+        // ============================================================
+        // DUPLICADOS IDÉNTICOS
+        // ============================================================
+
+        /**
+         * Genera un "fingerprint" (huella digital) de una fila usando sus valores visibles.
+         * Se usa para determinar si dos filas son IDÉNTICAS en contenido.
+         * El fingerprint excluye metadatos como __sourceFile.
+         * @param {Object} row - Fila de datos.
+         * @returns {string} String con los valores concatenados y normalizados.
+         */
+        function fingerprintRow(row) {
+            const parts = [];
+            // Ordena las claves para que el fingerprint sea determinístico
+            const keys = Object.keys(row).filter(k => !k.startsWith('__')).sort();
+            for (const k of keys) {
+                let v = row[k];
+                // Normaliza fechas a string ISO para comparación consistente
+                if (v instanceof Date && !isNaN(v)) {
+                    v = v.toISOString().split('T')[0];
+                } else {
+                    v = String(v).trim().toLowerCase();
+                }
+                parts.push(`${k}:${v}`);
+            }
+            return parts.join('|');
+        }
+
+        /**
+         * Elimina filas duplicadas que sean IDÉNTICAS: mismo número de documento
+         * y exactamente los mismos valores en todas las columnas de datos.
+         * Mantiene la primera ocurrencia y descarta las demás.
+         * @param {Array} rows - Array de filas (modificado in-place).
+         * @returns {number} Cantidad de filas eliminadas.
+         */
+        function removeDuplicateIdentical(rows) {
+            const seen = new Map(); // doc -> Set de fingerprints
+            const unique = [];
+            let eliminados = 0;
+
+            for (const row of rows) {
+                const doc = getNumeroDocumento(row);
+                const fp = fingerprintRow(row);
+
+                // Si no tiene documento, no puede ser duplicado por documento, la dejamos pasar
+                if (!doc) {
+                    unique.push(row);
+                    continue;
+                }
+
+                if (!seen.has(doc)) {
+                    seen.set(doc, new Set());
+                }
+                const fps = seen.get(doc);
+
+                if (fps.has(fp)) {
+                    // Ya existe una fila con este mismo documento y mismos datos exactos
+                    eliminados++;
+                    log(`Duplicado idéntico eliminado: Documento ${doc} de ${row.__sourceFile || '?'}` , 'warn');
+                } else {
+                    fps.add(fp);
+                    unique.push(row);
+                }
+            }
+
+            // Reemplaza el contenido del array original
+            rows.length = 0;
+            rows.push(...unique);
+            return eliminados;
+        }
+
+        // ============================================================
+        // CLASIFICACIÓN
+        // ============================================================
+
+        /**
+         * Clasifica cada fila del dataset global en una de tres categorías:
+         * 
+         * 1. NO VÁLIDOS: Fecha Productiva <= fechaCorte18 (venció 18 meses) 
+         *    Y Cantidad de Contratos == 0.
+         *    También entran aquí los que NO TENGAN fecha registrada.
+         * 
+         * 2. CONFLICTOS: Fecha Productiva <= fechaCorte18 (venció 18 meses)
+         *    Y Cantidad de Contratos > 0.
+         *    Estos aprendices tienen contratos a pesar de haber vencido.
+         * 
+         * 3. VÁLIDOS: Fecha Productiva > fechaCorte18 (aún dentro del rango de 18 meses).
+         *    Incluye fechas a futuro.
+         * 
+         * La fecha de corte se calcula como: hoy - 18 meses.
+         * Ejemplo: si hoy es 9/jun/2026, la fecha de corte es 9/dic/2024.
+         */
+        function clasificarAprendices() {
+            validos = [];
+            noValidos = [];
+            conflictos = [];
+
+            for (const row of allRows) {
+                const fProd = getFechaProductiva(row);
+                const cantContratos = getCantidadContratos(row);
+
+                // Sin fecha productiva = no se puede validar = No Válido
+                if (!fProd) {
+                    noValidos.push(row);
+                    continue;
+                }
+
+                // Comparación: si la fecha es anterior o igual al corte de 18 meses, venció
+                if (fProd <= fechaCorte18) {
+                    // Venció: ahora revisamos contratos
+                    if (cantContratos === 0) {
+                        noValidos.push(row);
+                    } else {
+                        conflictos.push(row);
+                    }
+                } else {
+                    // Aún dentro del rango de 18 meses (o a futuro) = Válido
+                    validos.push(row);
+                }
+            }
+
+            log(`Clasificación: ${validos.length} Válidos, ${noValidos.length} No Válidos, ${conflictos.length} Conflictos`, 'ok');
+        }
+
+        // ============================================================
+        // EXPORTACIÓN
+        // ============================================================
+
+        /**
+         * Exporta un array de filas a un archivo Excel (.xlsx).
+         * Incluye todas las columnas de datos + una columna extra "Archivo Origen".
+         * Aplica formato de fecha dd/mm/yyyy a las columnas que contengan "fecha".
+         * @param {Array} rows - Filas a exportar.
+         * @param {string} filename - Nombre del archivo de salida.
+         */
+        function exportarCategoria(rows, filename) {
+            if (rows.length === 0) {
+                showToast('No hay datos para exportar', 'error');
+                return;
+            }
+
+            $('loading').style.display = 'grid';
+            setTimeout(() => {
+                try {
+                    // Selecciona solo columnas de datos (no metadatos internos __)
+                    const cols = colNames.filter(c => !c.startsWith('__'));
+
+                    const out = rows.map(row => {
+                        const obj = {};
+                        cols.forEach(c => { obj[c] = row[c]; });
+                        // Agrega metadato de origen para trazabilidad
+                        obj['Archivo Origen'] = row.__sourceFile || '';
+                        return obj;
+                    });
+
+                    const ws = XLSX.utils.json_to_sheet(out);
+                    applyDateFormat(ws);
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, 'Datos');
+                    XLSX.writeFile(wb, filename);
+
+                    showToast(`Excel descargado: ${rows.length} filas`, 'success');
+                    log(`Exportado: ${filename}`, 'ok');
+                } catch (e) {
+                    log('Error exportando: ' + e.message, 'err');
+                    showToast('Error al exportar: ' + e.message, 'error');
+                }
+                $('loading').style.display = 'none';
+            }, 100);
+        }
+
+        /**
+         * Aplica formato de celda 'dd/mm/yyyy' a todas las columnas cuyo nombre
+         * contenga la palabra "fecha". Esto hace que Excel muestre las fechas
+         * legibles en lugar de números serial.
+         * @param {Object} ws - Worksheet de SheetJS.
+         */
+        function applyDateFormat(ws) {
+            const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+            if (!range || !ws['!ref']) return;
+
+            // Lee la primera fila para obtener los nombres de columnas
+            const headerRow = [];
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cellRef = XLSX.utils.encode_cell({ r: range.s.r, c: C });
+                const cell = ws[cellRef];
+                headerRow.push(cell ? String(cell.v) : '');
+            }
+
+            headerRow.forEach((colName, colIdx) => {
+                if (!colName || !colName.toLowerCase().includes('fecha')) return;
+
+                for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+                    const cellRef = XLSX.utils.encode_cell({ r: R, c: colIdx });
+                    const cell = ws[cellRef];
+                    if (cell && cell.v instanceof Date && !isNaN(cell.v)) {
+                        cell.t = 'd';        // Tipo: fecha
+                        cell.z = 'dd/mm/yyyy'; // Formato de visualización
+                    }
+                }
+            });
+        }
+
+        // ============================================================
+        // BOTONES DE EXPORTACIÓN
+        // ============================================================
+
+        $('btnExportValidos').addEventListener('click', () => {
+            exportarCategoria(validos, `Validos_${validos.length}filas.xlsx`);
+        });
+
+        $('btnExportNoValidos').addEventListener('click', () => {
+            exportarCategoria(noValidos, `NoValidos_${noValidos.length}filas.xlsx`);
+        });
+
+        $('btnExportConflictos').addEventListener('click', () => {
+            exportarCategoria(conflictos, `Conflictos_${conflictos.length}filas.xlsx`);
+        });
+
+        // ============================================================
+        // LIMPIAR
+        // ============================================================
+
+        /**
+         * Resetea completamente el estado de la aplicación:
+         * elimina todos los datos, limpia logs y vuelve a la pantalla de carga.
+         */
+        $('btnClear').addEventListener('click', () => {
+            if (!confirm('¿Borrar todos los datos cargados?')) return;
+
+            allRows = [];
+            validos = [];
+            noValidos = [];
+            conflictos = [];
+            loadedFiles = [];
+            colNames = [];
+
+            $('logs').innerHTML = '';
+            $('logs').style.display = 'none';
+            $('fileChips').innerHTML = '';
+            $('resultsCard').classList.add('hidden');
+            $('uploadArea').style.display = 'block';
+
+            showToast('Datos eliminados', 'success');
+            log('Herramienta lista. Selecciona una carpeta para comenzar.', 'info');
+        });
+
+        // ============================================================
+        // UI UPDATES
+        // ============================================================
+
+        /**
+         * Actualiza toda la interfaz visual después de procesar archivos:
+         * muestra el panel de resultados, actualiza contadores, chips de archivos,
+         * banner de duplicados y habilita/deshabilita botones de exportación.
+         * @param {number} duplicadosEliminados - Cantidad de filas duplicadas removidas.
+         */
+        function updateUI(duplicadosEliminados) {
+            // Muestra panel de resultados y oculta área de upload
+            $('resultsCard').classList.remove('hidden');
+            $('uploadArea').style.display = 'none';
+
+            // Actualiza info de fechas de referencia
+            const fmt = d => d.toLocaleDateString('es-CO', { day:'2-digit', month:'short', year:'numeric' });
+            $('dateInfo').innerHTML = `
+                Fecha actual: <strong>${fmt(hoy)}</strong> · 
+                Corte 18 meses: <strong>${fmt(fechaCorte18)}</strong> · 
+                Total filas procesadas: <strong>${allRows.length.toLocaleString()}</strong>
+            `;
+
+            // Actualiza contadores
+            $('stValidos').textContent = validos.length.toLocaleString();
+            $('stNoValidos').textContent = noValidos.length.toLocaleString();
+            $('stConflictos').textContent = conflictos.length.toLocaleString();
+            $('stFiles').textContent = loadedFiles.length;
+
+            // Muestra banner de duplicados si aplica
+            if (duplicadosEliminados > 0) {
+                $('dupCount').textContent = duplicadosEliminados.toLocaleString();
+                $('dupBanner').classList.remove('hidden');
+            } else {
+                $('dupBanner').classList.add('hidden');
+            }
+
+            // Habilita/deshabilita botones según haya datos
+            $('btnExportValidos').disabled = validos.length === 0;
+            $('btnExportNoValidos').disabled = noValidos.length === 0;
+            $('btnExportConflictos').disabled = conflictos.length === 0;
+
+            // Muestra chips con los nombres de archivos cargados
+            $('fileChips').innerHTML = loadedFiles.map(f => 
+                `<span class="chip">📄 ${esc(f.name)}</span>`
+            ).join('');
+        }
+
+        // ============================================================
+        // INICIALIZACIÓN
+        // ============================================================
+
+        log('Herramienta lista. Haz clic en "Elegir carpeta" para cargar archivos Excel.', 'info');
+    </script>
+</body>
+</html>
