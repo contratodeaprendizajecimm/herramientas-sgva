@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Cambio disponible SGVA - Regional Boyacá",
-  "version": "1.0",
-  "description": "Cambio disponible la habilitación de aprendices en el SGVA",
+  "name": "SGVA Toolkit - Regional Boyacá",
+  "version": "2.0.0",
+  "description": "Cambio masivo a Disponible + Descarga paralela de reportes por estado en SGVA SENA",
   "permissions": [
     "tabs",
     "scripting",
